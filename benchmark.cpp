@@ -21,8 +21,7 @@ int main()
 
         auto start = std::chrono::system_clock::now();
 
-        // std::system(".\\freq.exe ../black_sabbath.txt ../output.txt");
-        std::system("cat ../black_sabbath.txt");
+        std::system(".\\freq.exe ../black_sabbath.txt ../output.txt");
 
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
