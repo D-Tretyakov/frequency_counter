@@ -2,12 +2,17 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 #ifndef _WIN32
 #include <linux/limits.h>
 #endif
 
+#include <map>
+#include <string>
+
 void PrintHelp();
 void OpenFile(FILE** file_desc, const char* filename, const char* mode);
+int CheckAndConvert(int c);
 
 int main(int argc, char* argv[])
 {
@@ -31,12 +36,25 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    OpenFile(&output_file, argv[2], "w");
+    // OpenFile(&output_file, argv[2], "w");
 
+    std::map<std::string, int> freq;
+
+    char word[128] = { 0 }; // almost any english word will fit
+    int index = 0;
     int c;
     while ((c = std::fgetc(input_file)) != EOF)
     {
-        std::putchar(c);
+        int converted = CheckAndConvert(c);
+        word[index++] = converted;
+        if (!converted)
+        {
+            if (index > 1)
+            {
+                freq[std::string(word)]++;
+            }
+            index = 0;
+        }
     }
 
     if (std::ferror(input_file))
@@ -45,6 +63,22 @@ int main(int argc, char* argv[])
     }
 
     std::fclose(input_file);
+
+    std::multimap<int, std::string, std::greater<int>> reversed_freq;
+
+    for (auto it = freq.begin(); it != freq.end(); ++it)
+    {
+        reversed_freq.insert({ it->second, it->first });
+    }
+
+    OpenFile(&output_file, argv[2], "w");
+
+    for (auto it = reversed_freq.begin(); it != reversed_freq.end(); ++it)
+    {
+        std::fprintf(output_file, "%d %s\n", it->first, it->second.c_str());
+    }
+
+    std::fclose(output_file);
 
     return EXIT_SUCCESS;
 }
@@ -57,7 +91,7 @@ void PrintHelp()
 
 void OpenFile(FILE** file_desc, const char* filename, const char* mode)
 {
-#ifdef _WIN32
+#ifdef _WIN32 // i don't have visual studio, tested on MinGW
     char absolute_path[_MAX_PATH];
     char* result = _fullpath(absolute_path, filename, _MAX_PATH);
     if (!result)
@@ -74,4 +108,11 @@ void OpenFile(FILE** file_desc, const char* filename, const char* mode)
 #endif
 
     *file_desc = std::fopen(absolute_path, mode);
+}
+
+int CheckAndConvert(int c)
+{
+    if (std::isalpha(c))
+        return std::tolower(c);
+    return '\0';
 }
