@@ -6,4 +6,9 @@ set(SOURCES
     "main.cpp"
 )
 
+set(BENCHMARK_SOURCES
+    "benchmark.cpp"
+)
+
 add_executable("freq" ${SOURCES})
+add_executable("benchmark" ${BENCHMARK_SOURCES})
