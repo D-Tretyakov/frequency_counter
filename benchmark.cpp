@@ -8,7 +8,8 @@
 #include <fstream>
 #include <cmath>
 
-constexpr int iterations_number = 1'000;
+constexpr int iterations_number = 1'001;
+constexpr int bench_iteration_number = 5;
 
 int main()
 {
@@ -21,16 +22,21 @@ int main()
 
         auto start = std::chrono::system_clock::now();
 
-        std::system(".\\freq.exe ../black_sabbath.txt ../output.txt");
+        // std::system("./freq ../black_sabbath.txt ../output.txt");
+        std::system("./freq ../movies_text.txt ../output.txt");
 
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
         measurements[i] = elapsed.count();
     }
 
+    std::sort(measurements.begin(), measurements.end());
+
+    double median = measurements[iterations_number / 2 + 1];
+    double percentil_90 = measurements[iterations_number / 100 * 90];
     double average = std::accumulate(measurements.begin(), measurements.end(), 0.0) / measurements.size();
-    double max_value = *std::max_element(measurements.begin(), measurements.end());
-    double min_value = *std::min_element(measurements.begin(), measurements.end());
+    double max_value = measurements.back();
+    double min_value = measurements.front();
 
     std::vector<double> diff(measurements.size());
     std::transform(measurements.begin(), measurements.end(), diff.begin(), [average](double x) { return x - average; });
@@ -41,6 +47,8 @@ int main()
     auto bench_elapsed = std::chrono::duration_cast<std::chrono::seconds>(bench_end - bench_start);
 
     std::cout << "Results:" << std::endl;
+    std::cout << "median = " << median << "ms" << std::endl;
+    std::cout << "percentil 90 = " << percentil_90 << "ms" << std::endl;
     std::cout << "average = " << average << "ms" << std::endl;
     std::cout << "max = " << max_value << "ms" << std::endl;
     std::cout << "min = " << min_value << "ms" << std::endl;
@@ -48,9 +56,10 @@ int main()
     std::cout << "bench executed for " << std::fixed << bench_elapsed.count() << "s" << std::endl;
 
     std::ofstream output("benchmark_output.csv");
+    output << "iteration,measurement\n";
     for (int i = 0; i < iterations_number; i++)
     {
-        output << measurements[i] << "," << i << "\n";
+        output << i << "," << measurements[i] << "\n";
     }
 
     return 0;
