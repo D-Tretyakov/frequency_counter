@@ -15,8 +15,7 @@ WORKDIR /app
 COPY KeyHash.h .
 COPY benchmark.cpp .
 COPY main.cpp .
-COPY black_sabbath.txt .
-COPY movies_text.txt .
+COPY text .
 COPY CMakeLists.txt .
 
 WORKDIR /app/build
