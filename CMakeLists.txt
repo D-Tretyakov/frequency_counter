@@ -10,6 +10,8 @@ set(BENCHMARK_SOURCES
     "benchmark.cpp"
 )
 
+include_directories(".")
+
 set(CMAKE_CXX_FLAGS "-O3 -pg")
 
 add_executable("freq" ${SOURCES})
