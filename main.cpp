@@ -3,16 +3,25 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
+
+#include "sys/stat.h"
 #ifndef _WIN32
 #include <linux/limits.h>
+#include <stdlib.h>
 #endif
 
 #include <map>
 #include <string>
+#include <unordered_map>
+#include <vector>
+#include <algorithm>
+#include <array>
+
+#include "KeyHash.h"
 
 void PrintHelp();
 void OpenFile(FILE** file_desc, const char* filename, const char* mode);
-int CheckAndConvert(int c);
+char CheckAndConvert(char c);
 
 int main(int argc, char* argv[])
 {
@@ -29,33 +38,32 @@ int main(int argc, char* argv[])
     }
 
     FILE *input_file, *output_file;
-    OpenFile(&input_file, argv[1], "r");
+    OpenFile(&input_file, argv[1], "rb");
     if (!input_file)
     {
         std::perror("Input file opening failed");
         return EXIT_FAILURE;
     }
 
-    // OpenFile(&output_file, argv[2], "w");
+    struct stat buff;
+    fstat(fileno(input_file), &buff);
+    long input_size = buff.st_size;
 
-    std::map<std::string, int> freq;
+    if (input_size > 1'000'000'000)
+        std::puts("Warning! File is bigger than 1 Gb");
 
-    char word[128] = { 0 }; // almost any english word will fit
-    int index = 0;
-    int c;
-    while ((c = std::fgetc(input_file)) != EOF)
+    char* text;
+    try
     {
-        int converted = CheckAndConvert(c);
-        word[index++] = converted;
-        if (!converted)
-        {
-            if (index > 1)
-            {
-                freq[std::string(word)]++;
-            }
-            index = 0;
-        }
+        text = new char[input_size];
     }
+    catch (const std::bad_alloc& exception)
+    {
+        std::puts("Not enough memory available, exit");
+        return EXIT_FAILURE;
+    }
+
+    std::fread(text, sizeof(char), input_size, input_file);
 
     if (std::ferror(input_file))
     {
@@ -64,21 +72,41 @@ int main(int argc, char* argv[])
 
     std::fclose(input_file);
 
-    std::multimap<int, std::string, std::greater<int>> reversed_freq;
+    std::unordered_map<std::string, int, KeyHash> freq;
+    freq.reserve(input_size / 5); // average engilsh word length may be 5
 
-    for (auto it = freq.begin(); it != freq.end(); ++it)
+    char word[128] = { 0 }; // almost any english word will fit
+    int index = 0;
+    for (long i = 0; i < input_size; i++)
     {
-        reversed_freq.insert({ it->second, it->first });
+        char converted = CheckAndConvert(text[i]);
+        if (!converted && (index == 0))
+            continue;
+
+        word[index++] = converted;
+        if (!converted)
+        {
+            freq[word]++;
+            index = 0;
+        }
     }
+
+    using freq_pair = std::pair<std::string, int>;
+    std::vector<freq_pair> elems(freq.begin(), freq.end());
+    std::sort(elems.begin(), elems.end(), [](const freq_pair& p1, const freq_pair& p2) {
+        return p1.second > p2.second || (p1.second == p2.second && p1.first < p2.first);
+    });
 
     OpenFile(&output_file, argv[2], "w");
 
-    for (auto it = reversed_freq.begin(); it != reversed_freq.end(); ++it)
+    for (auto it = elems.begin(); it != elems.end(); ++it)
     {
-        std::fprintf(output_file, "%d %s\n", it->first, it->second.c_str());
+        std::fprintf(output_file, "%d %s\n", it->second, it->first.c_str());
     }
 
     std::fclose(output_file);
+
+    delete[] text;
 
     return EXIT_SUCCESS;
 }
@@ -110,9 +138,14 @@ void OpenFile(FILE** file_desc, const char* filename, const char* mode)
     *file_desc = std::fopen(absolute_path, mode);
 }
 
-int CheckAndConvert(int c)
+char CheckAndConvert(char c)
 {
-    if (std::isalpha(c))
-        return std::tolower(c);
+    // convert A-Z to a-z
+    if (c >= 65 && c <= 90)
+        return c + 32;
+    // if c is lower return it witout modification
+    else if (c >= 97 && c <= 122)
+        return c;
+
     return '\0';
 }
