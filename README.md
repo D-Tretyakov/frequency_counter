@@ -16,6 +16,6 @@
 
 Сборка через Docker:
 
-```docker build -t freq . ; docker run -it freq sh```
+```docker build -t freq . && docker run -it freq sh```
 
 Откроется интерактивная консоль с контейнером, в котором можно запустить бенчмарк
